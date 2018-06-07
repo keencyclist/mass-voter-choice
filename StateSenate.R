@@ -1,8 +1,5 @@
-# use the tidyverse of packages!
 install.packages("tidyverse")
 library(tidyverse)
-getwd()
-setwd("C:/Users/Paul/Documents/Voter Choice MA/MassLegislature")
 
 # read in complete 1970-2016 state election data
 elstats <- read.csv('elstats.csv', na.strings="NULL")
@@ -14,11 +11,12 @@ elstats <- elstats %>%
 # create a dataframe that has only state senate election from 1996 and later
 senate1996 <- elstats %>%
   filter(office_name == 'State Senate' & year>1995)
-table(senate1996$candidate_id)
 
 # --------------ERROR CHECKING
 # check for duplicate candidate IDs.
 # create list of unique candidate name / candidate_id combos
+table(senate1996$candidate_id)
+
 unique_id <- senate1996 %>%
   group_by(candidate_id,display_name) %>%
   summarise(n = n())
@@ -30,9 +28,8 @@ duplicate_id <- unique_id %>%
   filter(n>1)
 # -----------------------------
 
-# Install the car package
+# Install & load the car package for recodes
 install.packages("car")
-# Load the car package
 library(car)
 # CLEANING recode candidates that should have the same ID:
 senate1996$candidate_id <- recode(senate1996$candidate_id,"10375=1187; 10377=1190; 10412=1018; 11414=680; 10413=1019;11416=11415; 
@@ -79,10 +76,6 @@ remove(unique_contest, unique_id)
 remove(duplicate_contest, duplicate_id)
 remove(senate)
 remove(null_senate)
-summary(senate1996)
-
-# recode NULL to NA -- NOT NEEDED - fixed NULL on initial read.csv
-is.na(senate1996) <- senate1996 == "NULL"
 # -----------------------------------------------------
 
 
@@ -292,3 +285,7 @@ write.csv(incumbent_defeated, file='incumbent_defeated.csv')
 
 write_in_victory <- senate %>%
   filter(is_write_in == 1 & r == 1) 
+
+# create output file for data visualizations
+write.csv(senate_summary, file='senate_summary.csv')
+

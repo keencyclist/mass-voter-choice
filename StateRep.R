@@ -1,8 +1,6 @@
-# use the tidyverse of packages!
 install.packages("tidyverse")
 library(tidyverse)
-getwd()
-setwd("C:/Users/Paul/Documents/Voter Choice MA/MassLegislature")
+
 
 # read in complete 1970-2016 state election data
 elstats <- read.csv('elstats.csv', na.strings="NULL")
@@ -34,9 +32,8 @@ duplicate_id <- unique_id %>%
 rm(unique_id,duplicate_id)
 # -----------------------------
 
-# Install the car package
+# Install and load the car package for recode
 install.packages("car")
-# Load the car package
 library(car)
 # CLEANING recode candidates that should have the same ID:
 house1996$candidate_id <- recode(house1996$candidate_id, "15871=216; 8737=755; 15508=10132;
@@ -241,12 +238,6 @@ house_summary <- house_summary %>%
   mutate(incumbent_ran = ifelse(candidate_id == incumbent_id, 1, 0))
 
 
-# ------------ error checking
-# non-matching primaries -- happened in previous year
-#                        -- winner is unenrolled, not nominated by primary
-#                        -- candidate_party is missing
-# ---------------------------
-
 # NOTE: Error in the original file: Prior to 2002, some or all of the primary elections have the general election (November) date 
 #       in place of the actual (September) date. - not fixed.
 
@@ -361,6 +352,16 @@ plurality <- house_summary %>%
   filter(plurality_either == 1) %>%
   arrange(p_winner_pct, winner_pct)
 
+# get list of current members, as of 2016 election
+current_members <- house_summary %>%
+  filter(year == 2016 & is.na(is_special))
+
+# get current members who were plurality members
+current_plurality <- current_members %>%
+  inner_join(plurality, by = "winner_id")
+
+write.csv(current_plurality, file='current_plurality.csv')
+
 write_ins <- house %>%
   filter(is_write_in == 1) 
 
@@ -387,3 +388,29 @@ house_special_turnout <- house_summary %>%
 crosstab15 <- house_summary %>%
   filter(year>1996 & incumbent_ran != 1 & is.na(is_special)) %>%
   crosstab(non_comp, p_non_comp)
+
+write.csv(house_summary, file='house_summary.csv')
+
+house_summary$is_special[is.na(house_summary$is_special)] <- 0
+
+results1 <- lm(g_votes ~ g_unopposed + is_special + year + incumbent_ran, data = house_summary)
+summary(results1)
+
+results2 <- lm(p_votes ~ p_unopposed + is_special + year + incumbent_ran, data = house_summary)
+summary(results2)
+
+# find 2016 general winners who were also elected in 1996.
+winners_1996 <- house_elections %>%
+  filter(year == 1996 & is.na(is_special))
+
+winners_2016 <- house_elections %>%
+  filter(year == 2016 & is.na(is_special))
+
+before1996 <- winners_2016 %>%
+  inner_join(winners_1996, by = "winner_id")
+# wow, 24 who were first elected in 1996 or earlier
+
+longtime_incombents <- elstats %>%
+  inner_join(before1996, by = c("candidate_id" = "winner_id"))
+
+write.csv(longtime_incombents, file='longtime_incumbents.csv')
